@@ -124,4 +124,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# DSiCord cached files
+downloads/
+public/images
+
 # End of https://www.toptal.com/developers/gitignore/api/node,dotenv
