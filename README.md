@@ -4,6 +4,7 @@
 
 A simple way to interface with Discord using the Nintendo DSi Browser. Send and receive messages from server text channels with Twemoji, custom emotes, stickers, embeds, images, files, markdown and more.
 
-- Developed with a DS-first design.
-- Optimized for low latency.
-- Communicates with a lightweight server.
+- Developed with a **DS-first** design.
+- Optimized for **low latency**.
+- Utilizes **modern APIs** with polyfills.
+- Communicates with a **lightweight server**.
