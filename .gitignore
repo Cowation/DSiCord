@@ -126,6 +126,6 @@ dist
 
 # DSiCord cached files
 downloads/
-public/images
+public/stickers
 
 # End of https://www.toptal.com/developers/gitignore/api/node,dotenv
