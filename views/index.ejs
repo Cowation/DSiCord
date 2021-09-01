@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<meta name="viewport" content="width=240">
+	<script src="/scripts/EventSource.js"></script>
+	<script src="/scripts/json3.js"></script>
+	<script src="/scripts/jsonpack.js"></script>
+	<!-- <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script> -->
+	<!-- <script src="/scripts/dsicord.js"></script> -->
+	<script>
+		var eventSource = null,
+			xhrInfo = new XMLHttpRequest(),
+			xhrGetServers = new XMLHttpRequest(),
+			xhrGetChannels = new XMLHttpRequest(),
+			xhrSend = new XMLHttpRequest(),
+			servericon = null,
+			servername = null,
+			channelname = null,
+			serverlist = null,
+			channellist = null,
+			chatwindow = null,
+			startmessage = null,
+			messageBox = null,
+			gid = null,
+			cid = null,
+			talkable = null
+
+		function sendMessage() {
+			if (messageBox.value.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '') == '') {
+				messageBox.value = ""
+
+				return false
+			} else {
+				xhrSend.abort()
+				xhrSend.open("POST", "/message?message=" + encodeURIComponent(messageBox.value) + "&gid=" + gid + "&cid=" + cid)
+				xhrSend.send(null)
+				
+				messageBox.value = ""
+				
+				return false
+			}
+		}
+
+		xhrInfo.onreadystatechange = function() {
+			if (this.readyState == 4) {
+				if (this.responseText) {
+					var data = JSON.parse(this.responseText)
+				
+					servericon.src = data.iconURL
+					servername.innerText = data.serverName
+					channelname.innerText = "#" + data.channelName
+					startmessage.innerText = "This is the start of the #" + data.channelName + " channel."
+				}
+			}
+		}
+
+		xhrGetServers.onreadystatechange = function() {
+			if (this.readyState == 4) {
+				if (this.responseText) {
+					var data = JSON.parse(this.responseText)
+				
+					for (var i = 0; i < data.length; i++) {
+						var guild = data[i]
+						var iconURL = guild.iconURL
+						var guildId = guild.id
+					
+						var link = document.createElement("a")
+						var iconImage = document.createElement("img")
+					
+						iconImage.src = iconURL
+						link.href = "/channels/" + guildId + "/0"
+					
+						link.appendChild(iconImage)
+					
+						serverlist.appendChild(link)
+					}
+				}
+			}
+		}
+
+		xhrGetChannels.onreadystatechange = function() {
+			if (this.readyState == 4) {
+				if (this.responseText) {
+					var data = JSON.parse(this.responseText)
+
+					for (var i = 0; i < data.length; i++) {
+						var channel = data[i]
+						var channelName = channel.name
+						var channelId = channel.id
+
+						var link = document.createElement("a")
+						link.href = "/channels/" + gid + "/" + channelId
+						link.innerText = "#" + channelName
+
+						channellist.appendChild(link)
+					}
+				}
+			}
+		}
+
+		window.onload = function() {
+			servericon = document.getElementById("servericon")
+			servername = document.getElementById("servername")
+			channelname = document.getElementById("channelname")
+			serverlist = document.getElementById("serverlist")
+			channellist = document.getElementById("channellist")
+			chatwindow = document.getElementById("chatwindow")
+			startmessage = document.getElementById("startmessage")
+			messageBox = document.getElementById("messageBox")
+
+			gid = "<%= gid %>"
+			cid = "<%= cid %>"
+			talkable = <%= talkable %>
+		
+			xhrInfo.abort()
+			xhrInfo.open("GET", "/chatinfo?gid=" + gid + "&cid=" + cid)
+			xhrInfo.send(null)
+		
+			xhrGetServers.abort()
+			xhrGetServers.open("GET", "/getservers")
+			xhrGetServers.send(null)
+
+			xhrGetChannels.abort()
+			xhrGetChannels.open("GET", "/getchannels?gid=" + gid)
+			xhrGetChannels.send(null)
+
+			if (!talkable) {
+				document.getElementById("sendbutton").style.visibility = "hidden"
+				document.getElementById("messageBox").style.visibility = "hidden"
+				document.getElementById("chatwindow").style.height = "176px"
+			}
+
+			eventSource = new EventSource("/events?gid=" + gid + "&cid=" + cid)
+
+			eventSource.addEventListener("message", function(event) {
+				var data = jsonpack.unpack(event.data)
+				
+				if (data.color == "#000000") {
+					data.color = "#e6e5e3"
+				}
+			
+				var parentSpan = document.createElement("span")
+				var nameSpan = document.createElement("span")
+				nameSpan.innerText = data.author + ": "
+				nameSpan.style.color = data.color
+				var messageNode = document.createElement("span")
+				messageNode.innerHTML = data.content
+			
+				parentSpan.appendChild(nameSpan)
+				parentSpan.appendChild(messageNode)
+
+				// Rebuild the span element with HTML Images relpacing the emotes
+				if (data.emojis.length > 0) {
+					var emojis = data.emojis,
+						length = data.content.length,
+						fragment = document.createDocumentFragment(),
+						textIndex = 0,
+						allText = messageNode.innerHTML,
+						index,
+						img
+					
+					for (var i = 0; i < data.emojis.length; i++) {
+						var emote = emojis[i]
+						index = emote.indices[0]
+						if (index !== textIndex) {
+							var sliced = document.createElement("span")
+							sliced.innerHTML = allText.slice(textIndex, index)
+							fragment.appendChild(sliced)
+						}
+
+						textIndex = index + emote.text.length
+
+						img = new Image()
+						img.setAttribute("draggable", "false")
+						img.className = "emoji"
+						img.src = emote.url
+						fragment.appendChild(img)
+					}
+
+					if (textIndex < length) {
+						var sliced = document.createElement("span")
+							sliced.innerHTML = allText.slice(textIndex)
+							fragment.appendChild(sliced)
+					}
+
+					parentSpan.replaceChild(fragment, messageNode)
+				}
+			
+				var chatWindow = document.getElementById("chatwindow")
+			
+				var br = document.createElement("br")
+
+				chatWindow.appendChild(parentSpan)
+				chatWindow.appendChild(br)
+
+				// Place an attachment preview beneath message and add a break
+				if (data.attachments.length > 0) {
+					for (var i = 0; i < data.attachments.length; i++) {
+						var attachment = data.attachments[i]
+						var fragment = document.createDocumentFragment()
+
+						if (attachment.url) {
+							var img = new Image()
+							img.src = attachment.url
+							img.className = "preview"
+							img.onload = function() {
+								chatWindow.scrollTop = chatWindow.scrollHeight
+							}
+
+							fragment.appendChild(img)
+							fragment.appendChild(document.createElement("br"))
+						} else {
+							var div = document.createElement("div"),
+								icon = new Image(),
+								name = document.createElement("span"),
+								size = document.createElement("span")
+
+							div.style = "background-color: #1E1E1E; padding: 2px;"
+
+							icon.style = "display: inline; max-height: 10px; margin-left: 2px; margin-right: 4px;"
+							icon.src = "/images/file.png"
+
+							name.style = "font-size: smaller; color: #00b7ff; display: inline;"
+							name.innerText = attachment.name
+
+							size.style = "font-size: smaller; color: #72767d; display: inline; margin-left: 4px;"
+							size.innerText = "(" + attachment.size + ")"
+
+							div.appendChild(icon)
+							div.appendChild(name)
+							div.appendChild(size)
+							fragment.appendChild(div)
+						}
+
+						chatWindow.appendChild(fragment)
+					}
+				}
+
+				// Put a still-frame sticker and br underneath message
+				if (data.stickers.length > 0) {
+					for (var i = 0; i < data.stickers.length; i++) {
+						var sticker = data.stickers[i]
+						var fragment = document.createDocumentFragment()
+
+						var img = new Image()
+						img.src = sticker
+						img.className = "preview"
+						img.onload = function() {
+							chatWindow.scrollTop = chatWindow.scrollHeight
+						}
+
+						var br = document.createElement("br")
+
+						fragment.appendChild(img)
+						fragment.appendChild(br)
+						chatWindow.appendChild(fragment)
+					}
+				}
+
+				// Place a formatted div underneath the message
+				if (data.embeds.length > 0) {
+					for (var i = 0; i < data.embeds.length; i++) {
+						var embed = data.embeds[i]
+						var embedDiv = document.createElement("div"),
+							embedContent = document.createElement("div"),
+							br = document.createElement("br"),
+							color = "#4F545C"
+
+						if (embed.color) {
+							color = embed.color
+						}
+
+						if (embed.author) {
+							var authorDiv = document.createElement("div"),
+								authorName = document.createElement("span")
+							
+							if (embed.authorIcon) {
+								var authorIcon = document.createElement("img")
+								authorIcon.style = "display: inline; width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"
+								authorIcon.src = embed.authorIcon
+								authorDiv.appendChild(authorIcon)
+							}
+
+							authorName.style = "display: inline; font-size: smaller; vertical-align: middle;"
+							authorName.innerText = embed.author
+							authorDiv.appendChild(authorName)
+
+							embedContent.appendChild(authorDiv)
+						}
+
+						if (embed.title) {
+							var title = document.createElement("span")
+							title.innerHTML = embed.title
+							title.style = "margin-top: 8px; margin-bottom: 8px;"
+
+							if (embed.url) {
+								title.style = "color: #00b7ff;"
+							}
+
+							embedContent.appendChild(title)
+							embedContent.appendChild(document.createElement("br"))
+						}
+
+						if (embed.description) {
+							var description = document.createElement("span")
+							description.style = "color: #8E9297;"
+							description.innerHTML = embed.description
+
+							embedContent.appendChild(description)
+							embedContent.appendChild(document.createElement("br"))
+						}
+
+						if (embed.fields.length > 0) {
+							var parentFieldDiv = document.createElement("div")
+							parentFieldDiv.style = "margin-top: 8px; margin-bottom: 8px; font-size: smaller;"
+							for (var v = 0; v < embed.fields.length; v++) {
+								var field = embed.fields[v],
+									fieldDiv = document.createElement("div")
+
+								if (field.inline) {
+									fieldDiv.style = "display: inline-block; margin-right: 8px;"
+								}
+
+								var fieldName = document.createElement("span"),
+									fieldValue = document.createElement("span")
+
+								fieldName.innerHTML = field.name
+								fieldValue.innerHTML = field.value
+								fieldValue.style = "color: #8E9297"
+
+								fieldDiv.appendChild(fieldName)
+								fieldDiv.appendChild(document.createElement("br"))
+								fieldDiv.appendChild(fieldValue)
+
+								parentFieldDiv.appendChild(fieldDiv)
+							}
+							embedContent.appendChild(parentFieldDiv)
+						}
+
+						if (embed.image) {
+							var img = document.createElement("img")
+							img.style = "max-height: 60px;"
+							img.src = embed.image
+
+							embedContent.appendChild(img)
+							embedContent.appendChild(document.createElement("br"))
+						}
+
+						if (embed.footer) {
+							var footerDiv = document.createElement("div")
+							var footerName = document.createElement("span")
+							footerName.style = "display: inline; vertical-align: middle; font-size: smaller;"
+							footerName.innerText = embed.footer
+
+							if (embed.footerIcon) {
+								var img = document.createElement("img")
+								img.style = "display: inline; width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"
+								img.src = embed.footerIcon
+
+								footerDiv.appendChild(img)
+							}
+
+							footerDiv.appendChild(footerName)
+							embedContent.appendChild(footerDiv)
+						}
+
+						embedContent.style = "display: inline-block; max-width: 150px;"
+
+						embedDiv.appendChild(embedContent)
+
+						if (embed.thumbnail) {
+							var embedThumbnail = document.createElement("img")
+							embedThumbnail.style = "display: inline-block; max-width: 60px; float: right"
+							embedThumbnail.src = embed.thumbnail
+							embedDiv.appendChild(embedThumbnail)
+						}
+
+						embedDiv.style = "border-left: 3px solid " + color + "; padding: 4px; background-color: #1E1E1E; overflow: auto"
+
+						chatWindow.appendChild(embedDiv)
+					}
+				}
+			
+				chatWindow.scrollTop = chatWindow.scrollHeight
+			})
+		
+			document.body.scrollTop = 176
+		}
+	</script>
+	<link rel="stylesheet" type="text/css" href="/css/style.css">
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+	<meta name="msapplication-TileColor" content="#da532c">
+	<meta name="theme-color" content="#ffffff">
+	<title>DSiCord</title>
+</head>
+<body>
+	<div id="topscreen" style="margin: 0 8px 0 8px;">
+		<div id="topbar">
+			<img id="servericon" src="" alt="">
+			<h1 id="servername">SERVER</h1> 
+			<span id="smallarrow">&gt;</span> 
+			<span id="channelname">CHANNEL</span>
+		</div>
+		<div id="serverlist"></div>
+		<div id="channellist"></div>
+	</div>
+    <div id="bottomscreen">
+		<div id="chatwindow">
+			<span id="startmessage" style="color: gray;">This is the start of a channel.</span><br>
+		</div>
+		<form id="inputwindow" onsubmit="return sendMessage()">
+			<input style="width: 86%;" type="text" id="messageBox" name="message">
+			<input type="button" id="sendbutton" value=">" onclick="sendMessage()">
+		</form>
+	</div>
+</body>
+</html>

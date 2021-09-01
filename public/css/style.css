@@ -1,0 +1,108 @@
+body { margin: 0px; background-color: #202225; font-family: sans-serif; }
+
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+#topscreen, #bottomscreen { width: 240px; height: 176px; overflow: hidden; }
+
+#topbar > * {
+	vertical-align: middle;
+	display: inline;
+}
+
+#topbar {
+	white-space: nowrap;
+}
+
+#servericon {
+	max-width: 16px; 
+	max-height: 16px;
+}
+
+#servername {
+	color: #fff; 
+	font-size: small;
+}
+
+#smallarrow {
+	color: #A9A9A9;
+	font-size: smaller;
+}
+
+#channelname {
+	color: #fff;
+	font-size: smaller;
+}
+
+#serverlist {
+	overflow-y: hidden;
+	overflow-x: scroll;
+	white-space: nowrap;
+	margin-top: 4px;
+}
+
+#serverlist a > img {
+	display: inline;
+	max-width: 28px;
+	max-height: 28px;
+	margin-right: 4px;
+}
+
+#channellist {
+	overflow-y: hidden;
+	overflow-x: scroll;
+	white-space: nowrap;
+}
+
+#channellist a {
+	font-size: small;
+	text-decoration: none;
+	color: #8E9297;
+	display: inline;
+	margin-right: 4px;
+}
+
+#chatwindow {
+	font-size: small;
+	color: #fff;
+	height: 153px;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	word-wrap: break-word;
+}
+
+img.emoji {
+	height: 1em;
+	width: 1em;
+	margin: 0 .05em 0 .1em;
+	vertical-align: -0.1em;
+}
+
+img.preview {
+	max-width: 170px;
+	max-height: 100px;
+}
+
+a {
+	color: #00b7ff;
+	text-decoration: none;
+}
+
+pre {
+	margin: 0;
+	background-color: #1E1E1E;
+}
+
+#inputwindow {
+	display: flex;
+	flex-direction: row;
+}
+
+#sendbutton {
+	margin-left: -6px;
+	background-color: #7289DA; 
+	border: none;
+	padding: 2px 10px 3px 10px;
+}
